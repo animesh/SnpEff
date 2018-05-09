@@ -9,11 +9,9 @@ export VERSION_UND=`echo $VERSION | tr '.' '_'`
 # Build SnpEff
 #---
 
-cd $HOME/workspace/SnpEff/
+cd $SNPEFF
 
 mvn clean compile assembly:assembly
-
-cp target/SnpEff-$VERSION-jar-with-dependencies.jar $HOME/snpEff/snpEff.jar
 
 # Install JAR file in local Maven repo
 mvn install:install-file \
@@ -25,32 +23,35 @@ mvn install:install-file \
 	-DgeneratePom=true \
 	--quiet
 
-cd - 
+cp target/SnpEff-$VERSION-jar-with-dependencies.jar $SNPEFF/snpEff.jar
+
+	
+# cd - 
 
 #---
 # Build SnpSift
 #---
-cd $HOME/workspace/SnpSift/
+# cd $HOME/workspace/SnpSift/
 
-mvn clean compile assembly:assembly
+# mvn clean compile assembly:assembly
 
-cp target/SnpSift-$VERSION-jar-with-dependencies.jar $HOME/snpEff/SnpSift.jar
+# cp target/SnpSift-$VERSION-jar-with-dependencies.jar $HOME/snpEff/SnpSift.jar
 
-# Install JAR file in local Maven repo
-mvn install:install-file \
-	-Dfile=target/SnpSift-$VERSION.jar \
-	-DgroupId=org.snpsift \
-	-DartifactId=SnpSift \
-	-Dversion=$VERSION \
-	-Dpackaging=jar \
-	-DgeneratePom=true \
-	--quiet
+# # Install JAR file in local Maven repo
+# mvn install:install-file \
+	# -Dfile=target/SnpSift-$VERSION.jar \
+	# -DgroupId=org.snpsift \
+	# -DartifactId=SnpSift \
+	# -Dversion=$VERSION \
+	# -Dpackaging=jar \
+	# -DgeneratePom=true \
+	# --quiet
 
-cd - 
+# cd - 
 
-#---
-# Update galaxy databases
-#---
-./scripts_build/galaxy.sh
+# #---
+# # Update galaxy databases
+# #---
+# ./scripts_build/galaxy.sh
 
 echo "Build done!"

@@ -550,6 +550,38 @@ public class Transcript extends IntervalAndSubIntervals<Exon> {
 	}
 
 	/**
+	 * Retrieve extended coding sequence
+	 */
+	public synchronized String cdsExtended() {
+		if (cds != null) return cds;
+
+		// Concatenate all exons
+		List<Exon> exons = sortedStrand();
+		StringBuilder sequence = new StringBuilder();
+		int utr5len = 0, utr3len = 0;
+
+		// 5 prime UTR length
+		for (Utr utr : get5primeUtrs())
+			utr5len += utr.size();
+
+		// Append all exon sequences
+		boolean missingSequence = false;
+		for (Exon exon : exons) {
+			missingSequence |= !exon.hasSequence(); // If there is no sequence, we are in trouble
+			sequence.append(exon.getSequence());
+		}
+
+		if (missingSequence) cds = ""; // One or more exons does not have sequence. Nothing to do
+		else {
+			// OK, all exons have sequences
+
+			cds = sequence.substring(utr5len);
+		}
+
+		return cds;
+	}
+
+	/**
 	 * Create a marker of the coding region in this transcript
 	 */
 	public Marker cdsMarker() {
@@ -1442,6 +1474,19 @@ public class Transcript extends IntervalAndSubIntervals<Exon> {
 			else protein = codonTable().aa(cds(), true);
 		}
 		return protein;
+	}
+
+	/**
+	 * Protein sequence for XML (amino acid sequence produced by this transcripts)
+	 */
+	public String proteinTrimmed(){
+		String proteinSequence = protein();
+		boolean extend = !proteinSequence.contains("*") && proteinSequence.endsWith("?");
+		if (extend) {
+			if (!(Config.get() != null && Config.get().isTreatAllAsProteinCoding()) && !isProteinCoding()) proteinSequence = "";
+			else proteinSequence = codonTable().aa(cdsExtended(), true);
+		}
+		return proteinSequence.split("\\*")[0];
 	}
 
 	/**
