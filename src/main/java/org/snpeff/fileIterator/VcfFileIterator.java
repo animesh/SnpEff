@@ -109,7 +109,7 @@ public class VcfFileIterator extends MarkerFileIterator<VcfEntry> implements Par
 		return expandIub;
 	}
 
-	public boolean isHeadeSection() {
+	public boolean isHeaderSection() {
 		return headeSection;
 	}
 
