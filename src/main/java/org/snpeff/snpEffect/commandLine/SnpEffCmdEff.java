@@ -28,6 +28,7 @@ import org.snpeff.outputFormatter.BedAnnotationOutputFormatter;
 import org.snpeff.outputFormatter.BedOutputFormatter;
 import org.snpeff.outputFormatter.OutputFormatter;
 import org.snpeff.outputFormatter.VcfOutputFormatter;
+import org.snpeff.proteome.ProteinXml;
 import org.snpeff.snpEffect.EffectType;
 import org.snpeff.snpEffect.SnpEffectPredictor;
 import org.snpeff.snpEffect.VariantEffect;
@@ -53,6 +54,8 @@ import freemarker.template.Configuration;
 import freemarker.template.DefaultObjectWrapper;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
+
+import javax.xml.stream.XMLStreamException;
 
 /**
  * Command line program: Predict variant effects
@@ -90,6 +93,8 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 	String chrStr = "";
 	String inputFile = ""; // Input file
 	String fastaProt = null;
+	String xmlProt = null;
+	HashMap<Transcript, List<VariantEffect>> transcriptVariants = new HashMap<>(); // For creating protein annotations
 	String summaryFileCsv; // HTML Summary file name
 	String summaryFileHtml; // CSV Summary file name
 	String summaryGenesFile; // Gene table file
@@ -170,7 +175,7 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 			countVcfEntries++;
 
 			// Find if there is a pedigree and if it has any 'derived' entry
-			if (vcfFile.isHeadeSection()) {
+			if (vcfFile.isHeaderSection()) {
 				if (cancer) {
 					pedigree = readPedigree(vcfFile);
 					anyCancerSample = pedigree.anyDerived();
@@ -283,6 +288,19 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 
 		if (vcfFile != null) vcfFile.close();
 
+		// Creates protein XML file
+		if (xmlProt != null) {
+			try {
+				ProteinXml.writeProteinXml(xmlProt, "human", transcriptVariants, vcfFile.getVcfHeader().getSampleNames());
+			} catch (IOException ex)
+			{
+
+			} catch (XMLStreamException ex)
+			{
+
+			}
+		}
+
 		// Creates a summary output file
 		if (createSummaryCsv) {
 			if (verbose) Timer.showStdErr("Creating summary file: " + summaryFileCsv);
@@ -328,6 +346,12 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 		if (fastaProt != null) {
 			if ((new File(fastaProt)).delete() && verbose) {
 				Timer.showStdErr("Deleted protein fasta output file '" + fastaProt + "'");
+			}
+		}
+
+		if (xmlProt != null) {
+			if ((new File(xmlProt)).delete() && verbose) {
+				Timer.showStdErr("Deleted protein xml output file '" + xmlProt + "'");
 			}
 		}
 
@@ -621,7 +645,12 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 
 					case "-fastaprot":
 						if ((i + 1) < args.length) fastaProt = args[++i]; // Output protein sequences in fasta files
-						else usage("Missing -cancerSamples argument");
+						else usage("Missing -fastaProt argument");
+						break;
+
+					case "-xmlprot":
+						if ((i + 1) < args.length) xmlProt = args[++i]; // Output protein sequences in fasta files
+						else usage("Missing -xmlprot argument");
 						break;
 
 					case "-nochromoplots":
@@ -850,6 +879,8 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 			// Calculate sequence after applying variant
 			Transcript trAlt = tr.apply(var);
 
+			if (trAlt == null) continue;
+
 			// Build fasta entries and append to file
 			StringBuilder sb = new StringBuilder();
 			sb.append(">" + tr.getId() + " Ref\n" + tr.protein() + "\n");
@@ -866,6 +897,27 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 			Gpr.toFile(fastaProt, sb, true);
 
 			doneTr.add(tr);
+
+			// Add the variant effect to the list with the reference transcript
+			if (transcriptVariants.containsKey(tr)){
+				transcriptVariants.get(tr).add(varEff);
+			}
+			else {
+				transcriptVariants.put(tr, new ArrayList<>());
+				transcriptVariants.get(tr).add(varEff);
+			}
+
+			// If it's a high-impact variation, e.g. frameshift, apply the variant to the list with the alternate transcript
+			if (varEff.getEffectImpact() == EffectImpact.HIGH && trAlt.protein() != tr.protein()){
+				trAlt.setId(trAlt.getId() + "_" + varEff.getHgvsProt());
+				if (transcriptVariants.containsKey(trAlt)){
+					transcriptVariants.get(trAlt).add(varEff);
+				}
+				else {
+					transcriptVariants.put(trAlt, new ArrayList<>());
+					transcriptVariants.get(trAlt).add(varEff);
+				}
+			}
 		}
 	}
 

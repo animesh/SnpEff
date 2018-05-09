@@ -206,7 +206,7 @@ public class SnpEffCmdAcat extends SnpEff {
 		vcf.setDebug(debug);
 
 		for (VcfEntry ve : vcf) {
-			if (vcf.isHeadeSection()) {
+			if (vcf.isHeaderSection()) {
 				addHeader(vcf); // Add header lines
 				System.out.println(vcf.getVcfHeader()); // Show header
 			}

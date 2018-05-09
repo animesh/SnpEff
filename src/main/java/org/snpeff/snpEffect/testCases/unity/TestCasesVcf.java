@@ -468,7 +468,7 @@ public class TestCasesVcf extends TestCasesBase {
 		// Open VCF file
 		VcfFileIterator vcf = new VcfFileIterator(vcfFileName);
 		for (VcfEntry ve : vcf) {
-			if (vcf.isHeadeSection()) {
+			if (vcf.isHeaderSection()) {
 				// Add INFO field to header
 				vcf.getVcfHeader().addInfo(vhInfo);
 				if (verbose) System.out.println(vcf.getVcfHeader());
@@ -506,7 +506,7 @@ public class TestCasesVcf extends TestCasesBase {
 		// Open VCF file
 		VcfFileIterator vcf = new VcfFileIterator(vcfFileName);
 		for (VcfEntry ve : vcf) {
-			if (vcf.isHeadeSection()) {
+			if (vcf.isHeaderSection()) {
 				// Add INFO field to header
 				vcf.getVcfHeader().addInfo(vhInfo);
 				if (verbose) System.out.println(vcf.getVcfHeader());
