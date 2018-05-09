@@ -4,7 +4,7 @@
 #
 # Sort dbNSFP by genomic coordinates
 # Note: By default use the first two columns as 'chr' and 'pos'
-#       If you want to sort dbNSFP 3.X using hg19 genomic coordinates, you 
+#       If you want to sort dbNSFP 3.X using hg19 genomic coordinates, you
 #       have to specify columns 7 and 8. E.g.:
 #
 #			cat dbNSFP3.2a_variant.chr* \
@@ -24,7 +24,7 @@ if( $#ARGV == 1 ) {
 	$chrCol = $ARGV[0];
 	$posCol = $ARGV[1];
 } else {
-	die "Usage cat dbNSFP*_variant.chr* | dbNSFP_sort.pl chrCol posCol\n";
+	die "Usage cat dbNSFP*.txt | dbNSFP_sort.pl chrCol posCol\n";
 }
 
 # Maximum column to split
@@ -79,4 +79,3 @@ foreach $chr (sort keys %lines) {
 		print STDERR "\t\t$i\n" if( $i % 1000000 == 0 );
 	}
 }
-
