@@ -12,17 +12,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.io.FilenameUtils;
 import org.snpeff.SnpEff;
 import org.snpeff.akka.vcf.VcfWorkQueue;
 import org.snpeff.fileIterator.BedFileIterator;
 import org.snpeff.fileIterator.VariantFileIterator;
 import org.snpeff.fileIterator.VcfFileIterator;
 import org.snpeff.filter.VariantEffectFilter;
-import org.snpeff.interval.Marker;
-import org.snpeff.interval.Markers;
-import org.snpeff.interval.Transcript;
-import org.snpeff.interval.Variant;
-import org.snpeff.interval.VariantNonRef;
+import org.snpeff.interval.*;
 import org.snpeff.interval.tree.IntervalForest;
 import org.snpeff.outputFormatter.BedAnnotationOutputFormatter;
 import org.snpeff.outputFormatter.BedOutputFormatter;
@@ -94,7 +91,9 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 	String inputFile = ""; // Input file
 	String fastaProt = null;
 	String xmlProt = null;
-	HashMap<Transcript, List<VariantEffect>> transcriptVariants = new HashMap<>(); // For creating protein annotations
+	String xmlProt2 = null;
+    HashMap<Transcript, List<VariantEffect>> transcriptVariants = new HashMap<>(); // For creating protein annotations
+    ArrayList<Tuple<Transcript, VariantEffect>> altTranscriptVariants = new ArrayList<>(); // For creating protein annotations
 	String summaryFileCsv; // HTML Summary file name
 	String summaryFileHtml; // CSV Summary file name
 	String summaryGenesFile; // Gene table file
@@ -291,13 +290,24 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 		// Creates protein XML file
 		if (xmlProt != null) {
 			try {
-				ProteinXml.writeProteinXml(xmlProt, "human", transcriptVariants, vcfFile.getVcfHeader().getSampleNames());
-			} catch (IOException ex)
-			{
+				Timer.showStdErr("Creating xml file " + xmlProt);
+				ProteinXml.writeProteinXml(xmlProt, "Homo sapiens", transcriptVariants, vcfFile.getVcfHeader().getSampleNames());
+			} catch (IOException ex) {
+				System.err.println(ex.getMessage());
+			} catch (XMLStreamException ex) {
+				System.err.println(ex.getMessage());
+			}
+		}
 
-			} catch (XMLStreamException ex)
-			{
-
+		// Creates protein XML file
+		if (xmlProt2 != null) {
+			try {
+				Timer.showStdErr("Creating xml file " + xmlProt2);
+				ProteinXml.writeVariantProteinXml(xmlProt2, "Homo sapiens", altTranscriptVariants);
+			} catch (IOException ex) {
+				System.err.println(ex.getMessage());
+			} catch (XMLStreamException ex) {
+				System.err.println(ex.getMessage());
 			}
 		}
 
@@ -352,6 +362,12 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 		if (xmlProt != null) {
 			if ((new File(xmlProt)).delete() && verbose) {
 				Timer.showStdErr("Deleted protein xml output file '" + xmlProt + "'");
+			}
+		}
+
+		if (xmlProt2 != null) {
+			if ((new File(xmlProt2)).delete() && verbose) {
+				Timer.showStdErr("Deleted protein xml output file '" + xmlProt2 + "'");
 			}
 		}
 
@@ -649,7 +665,10 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 						break;
 
 					case "-xmlprot":
-						if ((i + 1) < args.length) xmlProt = args[++i]; // Output protein sequences in fasta files
+						if ((i + 1) < args.length){
+							xmlProt = args[++i]; // Output protein sequences in xml files
+							xmlProt2 = FilenameUtils.removeExtension(xmlProt) + ".applied.xml"; // Output protein sequences in xml files
+						}
 						else usage("Missing -xmlprot argument");
 						break;
 
@@ -872,6 +891,18 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 	 */
 	void proteinAltSequence(Variant var, VariantEffects variantEffects) {
 		Set<Transcript> doneTr = new HashSet<>();
+
+		// Start out the transcript list with everything, to which variants are added
+		transcriptVariants = new HashMap<>();
+		for (Gene g : genome.getGenes()){
+			for (Transcript t : g){
+				if (!transcriptVariants.containsKey(t)){
+					transcriptVariants.put(t, new ArrayList<>());
+				}
+			}
+		}
+
+
 		for (VariantEffect varEff : variantEffects) {
 			Transcript tr = varEff.getTranscript();
 			if (tr == null || doneTr.contains(tr)) continue;
@@ -883,7 +914,7 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 
 			// Build fasta entries and append to file
 			StringBuilder sb = new StringBuilder();
-			sb.append(">" + tr.getId() + " Ref\n" + tr.protein() + "\n");
+			sb.append(">" + tr.getId() + " Ref\n" + tr.proteinTrimmed() + "\n");
 			sb.append(">" + tr.getId() + " Variant " //
 					+ var.getChromosomeName() //
 					+ ":" + (var.getStart() + 1) //
@@ -892,11 +923,14 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 					+ " Alt:" + var.getAlt() //
 					+ " HGVS.p:" + varEff.getHgvsProt() //
 					+ "\n" //
-					+ trAlt.protein() + "\n" //
+					+ trAlt.proteinTrimmed() + "\n" //
 			);
 			Gpr.toFile(fastaProt, sb, true);
 
 			doneTr.add(tr);
+
+            // Add the variant effect to the list with the alternate transcript
+            altTranscriptVariants.add(new Tuple<>(trAlt, varEff));
 
 			// Add the variant effect to the list with the reference transcript
 			if (transcriptVariants.containsKey(tr)){
