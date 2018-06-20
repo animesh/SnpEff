@@ -4,6 +4,8 @@ import org.snpeff.interval.Gene;
 import org.snpeff.interval.Transcript;
 import org.snpeff.snpEffect.VariantEffect;
 import org.snpeff.util.Tuple;
+import org.snpeff.vcf.EffFormatVersion;
+import org.snpeff.vcf.VcfEffect;
 
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLOutputFactory;
@@ -68,7 +70,7 @@ public class ProteinXml {
 
             writeStartElement(writer, "feature");
             writer.writeAttribute("type", "sequence variant");
-            writer.writeAttribute("description", var.getVariant().toStringEnsembl());
+            writer.writeAttribute("description", var.getVariant().line);
             writeStartElement(writer, "original");
             writer.writeCharacters(var.getAaRef());
             writer.writeEndElement(); xmlDepth--; // reference
@@ -161,12 +163,15 @@ public class ProteinXml {
 
                 writeStartElement(writer, "feature");
                 writer.writeAttribute("type", "sequence variant");
-                writer.writeAttribute("description", var.getVariant().toStringEnsembl() + "\t" + var.toString().replace("\t","|"));
+                String[] descArr = var.getVariant().line.split("\t");
+                descArr[7] = "ANN=" + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString();// var.toString().replace("\t", "|");
+                writer.writeAttribute("description", String.join("\t", descArr));
                 writeStartElement(writer, "original");
-                writer.writeCharacters(var.getAaRef());
+                String refSeq = var.getAaAlt().endsWith("?") || var.getAaAlt() == "" ? tr.proteinTrimmed().substring(var.getCodonNum()) : var.getAaRef();
+                writer.writeCharacters(refSeq);
                 writer.writeEndElement(); xmlDepth--; // reference
                 writeStartElement(writer, "variation");
-                String varSeq = !var.getAaAlt().endsWith("?") ? var.getAaAlt() : tr.proteinTrimmed().substring(var.getCodonNum());
+                String varSeq = var.getAaAlt().endsWith("?") || var.getAaAlt() == "" ? tr.apply(var.getVariant()).proteinTrimmed().substring(var.getCodonNum()) : var.getAaAlt();
                 writer.writeCharacters(varSeq);
                 writer.writeEndElement(); xmlDepth--; // alternate
 

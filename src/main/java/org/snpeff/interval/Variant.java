@@ -54,11 +54,12 @@ public class Variant extends Marker {
 	protected String alt; // Changed bases
 	protected String genotype; // Genotype 'ALT' (e.g. A VCF entry may encode multiple ALTs).
 	protected boolean imprecise = false; // Imprecise variant: coordinates are not exact (E.g. see section "Encoding Structural Variants in VCF" from VCF spec. 4.1)
+	public String line; // the original VCF line
 
 	/**
 	 * Create variants from ALT (which can be multiple values)
 	 */
-	public static List<Variant> factory(Chromosome chromo, int start, String ref, String altStr, String id, boolean expand) {
+	public static List<Variant> factory(Chromosome chromo, int start, String ref, String altStr, String id, boolean expand, String line) {
 		LinkedList<Variant> list = new LinkedList<>();
 
 		// No alt? It's an interval
@@ -100,12 +101,14 @@ public class Variant extends Marker {
 				if (!refIub && !altIub) {
 					// Non-IUB expansion needed
 					Variant var = new Variant(chromo, start, ref, alt, id);
+					var.line = line;
 					list.add(var);
 				} else if (altIub && !refIub) {
 					// ALT has IUB characters
 					IubString iubsAlt = new IubString(alt);
 					for (String seqAlt : iubsAlt) {
 						Variant var = new Variant(chromo, start, ref, seqAlt, id);
+						var.line = line;
 						list.add(var);
 					}
 				} else if (!altIub && refIub) {
@@ -113,6 +116,7 @@ public class Variant extends Marker {
 					IubString iubsRef = new IubString(ref);
 					for (String seqRef : iubsRef) {
 						Variant var = new Variant(chromo, start, seqRef, alt, id);
+						var.line = line;
 						list.add(var);
 					}
 				} else if (altIub && refIub) {
@@ -122,6 +126,7 @@ public class Variant extends Marker {
 						IubString iubsAlt = new IubString(alt);
 						for (String seqAlt : iubsAlt) {
 							Variant var = new Variant(chromo, start, seqRef, seqAlt, id);
+							var.line = line;
 							list.add(var);
 						}
 					}
