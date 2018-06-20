@@ -512,6 +512,17 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 		VcfFileIterator vcfFile = new VcfFileIterator(inputFile, config.getGenome());
 		vcfFile.setDebug(debug);
 
+		// Set up transcript information for protein XML
+		// Start out the transcript list with everything, to which variants are added
+		transcriptVariants = new HashMap<>();
+		for (Gene g : genome.getGenes()){
+			for (Transcript t : g){
+				if (!transcriptVariants.containsKey(t)){
+					transcriptVariants.put(t, new ArrayList<>());
+				}
+			}
+		}
+
 		// Iterate over VCF entries
 		for (VcfEntry vcfEntry : vcfFile)
 			annotate(vcfEntry);
@@ -874,7 +885,7 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 		boolean isOutVcf = (outputFormat == OutputFormat.VCF) || (outputFormat == OutputFormat.GATK);
 		if (isOutVcf && (inputFormat != InputFormat.VCF)) usage("Output in VCF format is only supported when the input is also in VCF format");
 		if (!isOutVcf && lossOfFunction) usage("Loss of function annotation is only supported when when output is in VCF format");
-		if (!isOutVcf && cancer) usage("Canccer annotation is only supported when when output is in VCF format");
+		if (!isOutVcf && cancer) usage("Cancer annotation is only supported when when output is in VCF format");
 
 		// Sanity check for multi-threaded version
 		if (multiThreaded) {
@@ -891,17 +902,6 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 	 */
 	void proteinAltSequence(Variant var, VariantEffects variantEffects) {
 		Set<Transcript> doneTr = new HashSet<>();
-
-		// Start out the transcript list with everything, to which variants are added
-		transcriptVariants = new HashMap<>();
-		for (Gene g : genome.getGenes()){
-			for (Transcript t : g){
-				if (!transcriptVariants.containsKey(t)){
-					transcriptVariants.put(t, new ArrayList<>());
-				}
-			}
-		}
-
 
 		for (VariantEffect varEff : variantEffects) {
 			Transcript tr = varEff.getTranscript();
@@ -942,16 +942,16 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 			}
 
 			// If it's a high-impact variation, e.g. frameshift, apply the variant to the list with the alternate transcript
-			if (varEff.getEffectImpact() == EffectImpact.HIGH && trAlt.protein() != tr.protein()){
-				trAlt.setId(trAlt.getId() + "_" + varEff.getHgvsProt());
-				if (transcriptVariants.containsKey(trAlt)){
-					transcriptVariants.get(trAlt).add(varEff);
-				}
-				else {
-					transcriptVariants.put(trAlt, new ArrayList<>());
-					transcriptVariants.get(trAlt).add(varEff);
-				}
-			}
+//			if (varEff.getEffectImpact() == EffectImpact.HIGH && trAlt.protein() != tr.protein()){
+//				trAlt.setId(trAlt.getId() + "_" + varEff.getHgvsProt());
+//				if (transcriptVariants.containsKey(trAlt)){
+//					transcriptVariants.get(trAlt).add(varEff);
+//				}
+//				else {
+//					transcriptVariants.put(trAlt, new ArrayList<>());
+//					transcriptVariants.get(trAlt).add(varEff);
+//				}
+//			}
 		}
 	}
 

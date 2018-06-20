@@ -1491,7 +1491,7 @@ public class VcfEntry extends Marker implements Iterable<VcfGenotype> {
 
 		if (alt == null || alt.isEmpty() || alt.equals(reference)) {
 			// Non-variant
-			list = Variant.factory(chromo, start, reference, null, id, false);
+			list = Variant.factory(chromo, start, reference, null, id, false, line);
 		} else if (alt.charAt(0) == '<') {
 			// Structural variants
 			if (alt.startsWith("<DEL")) {
@@ -1508,7 +1508,7 @@ public class VcfEntry extends Marker implements Iterable<VcfGenotype> {
 						change[i] = reference.length() > i ? reference.charAt(i) : 'N';
 					ch = new String(change);
 				}
-				list = Variant.factory(chromo, startNew, ch, "", id, false);
+				list = Variant.factory(chromo, startNew, ch, "", id, false, line);
 			} else if (alt.startsWith("<INV")) {
 				// Inversion
 				int startNew = start + reference.length();
@@ -1549,7 +1549,7 @@ public class VcfEntry extends Marker implements Iterable<VcfGenotype> {
 			if (reference.length() == 1) {
 				// SNPs
 				// 20     3 .         C      G       .   PASS  DP=100
-				list = Variant.factory(chromo, start, reference, alt, id, vcfFileIterator.isExpandIub());
+				list = Variant.factory(chromo, start, reference, alt, id, vcfFileIterator.isExpandIub(), line);
 			} else {
 				// MNPs
 				// 20     3 .         TC     AT      .   PASS  DP=100
@@ -1566,7 +1566,7 @@ public class VcfEntry extends Marker implements Iterable<VcfGenotype> {
 
 				String newRef = reference.substring(startDiff, endDiff + 1);
 				String newAlt = alt.substring(startDiff, endDiff + 1);
-				list = Variant.factory(chromo, start + startDiff, newRef, newAlt, id, vcfFileIterator.isExpandIub());
+				list = Variant.factory(chromo, start + startDiff, newRef, newAlt, id, vcfFileIterator.isExpandIub(), line);
 			}
 		} else {
 			// Short Insertions, Deletions or Mixed Variants (substitutions)
@@ -1582,7 +1582,7 @@ public class VcfEntry extends Marker implements Iterable<VcfGenotype> {
 				String ref = "";
 				String ch = align.getAlignment();
 				if (!ch.startsWith("-")) throw new RuntimeException("Deletion '" + ch + "' does not start with '-'. This should never happen!");
-				list = Variant.factory(chromo, start + startDiff, ref, ch, id, vcfFileIterator.isExpandIub());
+				list = Variant.factory(chromo, start + startDiff, ref, ch, id, vcfFileIterator.isExpandIub(), line);
 				break;
 
 			case INS:
@@ -1591,14 +1591,14 @@ public class VcfEntry extends Marker implements Iterable<VcfGenotype> {
 				ch = align.getAlignment();
 				ref = "";
 				if (!ch.startsWith("+")) throw new RuntimeException("Insertion '" + ch + "' does not start with '+'. This should never happen!");
-				list = Variant.factory(chromo, start + startDiff, ref, ch, id, vcfFileIterator.isExpandIub());
+				list = Variant.factory(chromo, start + startDiff, ref, ch, id, vcfFileIterator.isExpandIub(), line);
 				break;
 
 			case MIXED:
 				// Case: Mixed variant (substitution)
 				reference = reference.substring(startDiff);
 				alt = alt.substring(startDiff);
-				list = Variant.factory(chromo, start + startDiff, reference, alt, id, vcfFileIterator.isExpandIub());
+				list = Variant.factory(chromo, start + startDiff, reference, alt, id, vcfFileIterator.isExpandIub(), line);
 				break;
 
 			default:
