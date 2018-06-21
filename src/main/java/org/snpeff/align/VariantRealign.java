@@ -116,6 +116,7 @@ public class VariantRealign {
 		// Create new variant
 		variantRealigned = new Variant(variant.getParent(), start, refRealign, altRealign, variant.getId());
 		variantRealigned.setGenotype(variant.getGenotype());
+		variantRealigned.line = variant.line;
 
 		return true;
 	}

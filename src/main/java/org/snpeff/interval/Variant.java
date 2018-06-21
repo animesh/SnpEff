@@ -65,6 +65,7 @@ public class Variant extends Marker {
 		// No alt? It's an interval
 		if (altStr == null) {
 			Variant var = new Variant(chromo, start, ref, null, id);
+			var.line = line;
 			list.add(var);
 			return list;
 		}
@@ -78,6 +79,7 @@ public class Variant extends Marker {
 			// Special case, two ALTs are the same
 			if (alts.length == 2 && alts[0].equals(alts[1])) {
 				Variant var = new Variant(chromo, start, ref, alts[0], id);
+				var.line = line;
 				list.add(var);
 				return list;
 			}
@@ -92,6 +94,7 @@ public class Variant extends Marker {
 			if (!expand) {
 				// Non-IUB expansion needed
 				Variant var = new Variant(chromo, start, ref, alt, id);
+				var.line = line;
 				list.add(var);
 			} else {
 				refIub = IubString.hasIUBMax(ref);
@@ -174,6 +177,7 @@ public class Variant extends Marker {
 		clone.alt = alt;
 		clone.genotype = genotype;
 		clone.imprecise = imprecise;
+		clone.line = line;
 		return clone;
 	}
 
@@ -213,6 +217,8 @@ public class Variant extends Marker {
 			varMnp = new Variant(getChromosome(), start, ref.substring(0, alt.length()), alt, id + "_MNP");
 			varInDel = new Variant(getChromosome(), start + alt.length(), ref.substring(alt.length()), "", id + "_DEL");
 		}
+		varMnp.line = line;
+		varInDel.line = line;
 
 		Variant[] variants = new Variant[2];
 		variants[0] = varMnp;
@@ -467,6 +473,7 @@ public class Variant extends Marker {
 		clone.ref = alt;
 		clone.genotype = ref;
 		clone.imprecise = imprecise;
+		clone.line = line;
 		return clone;
 	}
 

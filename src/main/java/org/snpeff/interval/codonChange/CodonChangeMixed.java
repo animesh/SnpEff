@@ -47,6 +47,8 @@ public class CodonChangeMixed extends CodonChangeMnp {
 
 		mnp = new Variant(variant.getChromosome(), variant.getStart(), refMnp, altMnp, variant.getId());
 		indel = new Variant(variant.getChromosome(), variant.getStart() + minLen, refIndel, altIndel, variant.getId());
+		mnp.line = variant.line;
+		indel.line = variant.line;
 
 		// Create codon changes
 		variantEffectsOri = variantEffects;

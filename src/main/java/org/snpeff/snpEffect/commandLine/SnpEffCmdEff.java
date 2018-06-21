@@ -290,7 +290,7 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 		// Creates protein XML file
 		if (xmlProt != null) {
 			try {
-				Timer.showStdErr("Creating xml file " + xmlProt);
+				Timer.showStdErr("Creating xml file " + xmlProt + " with " + transcriptVariants.keySet().size() + " transcripts");
 				ProteinXml.writeProteinXml(xmlProt, "Homo sapiens", transcriptVariants, vcfFile.getVcfHeader().getSampleNames());
 			} catch (IOException ex) {
 				System.err.println(ex.getMessage());
@@ -300,16 +300,16 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 		}
 
 		// Creates protein XML file
-		if (xmlProt2 != null) {
-			try {
-				Timer.showStdErr("Creating xml file " + xmlProt2);
-				ProteinXml.writeVariantProteinXml(xmlProt2, "Homo sapiens", altTranscriptVariants);
-			} catch (IOException ex) {
-				System.err.println(ex.getMessage());
-			} catch (XMLStreamException ex) {
-				System.err.println(ex.getMessage());
-			}
-		}
+//		if (xmlProt2 != null) {
+//			try {
+//				Timer.showStdErr("Creating xml file " + xmlProt2);
+//				ProteinXml.writeVariantProteinXml(xmlProt2, "Homo sapiens", altTranscriptVariants);
+//			} catch (IOException ex) {
+//				System.err.println(ex.getMessage());
+//			} catch (XMLStreamException ex) {
+//				System.err.println(ex.getMessage());
+//			}
+//		}
 
 		// Creates a summary output file
 		if (createSummaryCsv) {

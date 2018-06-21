@@ -1513,6 +1513,7 @@ public class VcfEntry extends Marker implements Iterable<VcfGenotype> {
 				// Inversion
 				int startNew = start + reference.length();
 				Variant var = new Variant(chromo, startNew, end, id);
+				var.line = line;
 				var.setVariantType(VariantType.INV);
 				list = new LinkedList<>();
 				list.add(var);
@@ -1520,6 +1521,7 @@ public class VcfEntry extends Marker implements Iterable<VcfGenotype> {
 				// Duplication
 				int startNew = start + reference.length();
 				Variant var = new Variant(chromo, startNew, end, id);
+				var.line = line;
 				var.setVariantType(VariantType.DUP);
 				list = new LinkedList<>();
 				list.add(var);
@@ -1542,6 +1544,7 @@ public class VcfEntry extends Marker implements Iterable<VcfGenotype> {
 			int trStart = Gpr.parseIntSafe(posSplit[1]) - 1;
 
 			VariantBnd var = new VariantBnd(chromo, start, ref, altBases, trChr, trStart, left, before);
+			var.line = line;
 			list = new LinkedList<>();
 			list.add(var);
 		} else if (reference.length() == alt.length()) {
@@ -1612,7 +1615,10 @@ public class VcfEntry extends Marker implements Iterable<VcfGenotype> {
 		//---
 		if (list == null) list = new LinkedList<>();
 		for (Variant variant : list)
-			variant.setGenotype(alt);
+        {
+            variant.setGenotype(alt);
+            variant.line = line;
+        }
 
 		return list;
 	}
