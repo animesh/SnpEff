@@ -1486,7 +1486,8 @@ public class Transcript extends IntervalAndSubIntervals<Exon> {
 			if (!(Config.get() != null && Config.get().isTreatAllAsProteinCoding()) && !isProteinCoding()) proteinSequence = "";
 			else proteinSequence = codonTable().aa(cdsExtended(), true);
 		}
-		return proteinSequence.split("\\*")[0];
+		String[] splitSeq = proteinSequence.split("\\*");
+		return splitSeq.length > 0 ? splitSeq[0] : "";
 	}
 
 	/**

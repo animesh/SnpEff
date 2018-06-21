@@ -3,6 +3,7 @@ package org.snpeff.proteome;
 import org.snpeff.interval.Gene;
 import org.snpeff.interval.Transcript;
 import org.snpeff.snpEffect.VariantEffect;
+import org.snpeff.util.Timer;
 import org.snpeff.util.Tuple;
 import org.snpeff.vcf.EffFormatVersion;
 import org.snpeff.vcf.VcfEffect;
@@ -115,7 +116,8 @@ public class ProteinXml {
 
         for (Transcript tr : transcriptVariants.keySet())
         {
-            if (!tr.isProteinCoding() || tr.protein().isEmpty()  || tr.isErrorStartCodon() || !tr.protein().contains("*"))
+            if (!tr.isProteinCoding() || tr.isErrorStartCodon() ||
+                    tr.proteinTrimmed().isEmpty() || tr.proteinTrimmed().endsWith("?"))
                 continue;
 
             writeStartElement(writer, "entry");
@@ -159,7 +161,17 @@ public class ProteinXml {
             // TODO: Implement a better Transcript.protein() method for this output: trim to stop codon and possibly go beyond coding domain if there's a frameshift that extends
             for (VariantEffect var : transcriptVariants.get(tr))
             {
-                if (var.getFunctionalClass().compareTo(VariantEffect.FunctionalClass.MISSENSE) < 0 && var.getAaRef() == var.getAaAlt()) continue; // only annotate indels and nonsynonymous variations
+                if (var.getFunctionalClass().compareTo(VariantEffect.FunctionalClass.MISSENSE) < 0 && var.getAaRef() == var.getAaAlt()) { // only annotate indels and nonsynonymous variations
+                    continue;
+                }
+                if (var.getVariant() == null){
+                    Timer.showStdErr("getVariant() returned null for: " + var.toString());
+                    continue;
+                }
+                else if (var.getVariant().line ==  null){
+                    Timer.showStdErr("line for getVariant() returned null for: " + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString());
+                    continue;
+                }
 
                 writeStartElement(writer, "feature");
                 writer.writeAttribute("type", "sequence variant");
