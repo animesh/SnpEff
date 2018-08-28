@@ -177,7 +177,7 @@ public class ProteinXml {
                 writer.writeAttribute("type", "sequence variant");
                 String[] descArr = var.getVariant().line.split("\t");
                 descArr[7] = "ANN=" + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString();// var.toString().replace("\t", "|");
-                writer.writeAttribute("description", String.join("\t", descArr));
+                writer.writeAttribute("description", String.join("\\t", descArr));
                 writeStartElement(writer, "original");
                 String refSeq = var.getAaAlt().endsWith("?") || var.getAaAlt() == "" ? tr.proteinTrimmed().substring(var.getCodonNum()) : var.getAaRef();
                 writer.writeCharacters(refSeq);
