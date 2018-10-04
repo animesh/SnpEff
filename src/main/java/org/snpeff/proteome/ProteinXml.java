@@ -179,14 +179,16 @@ public class ProteinXml {
                         continue;
                     }
 
-                    // indel cases to avoid
-                    boolean isIndel = var.getAaAlt().endsWith("?") || var.getAaAlt() == "";
-                    if (isIndel && var.getCodonNum() >= tr.proteinTrimmed().length())
+                    // multiple stop codons or weird indel case
+                    if (var.getCodonNum() >= tr.proteinTrimmed().length())
                     {
                         Timer.showStdErr("line where getCodonNum() was longer than the protein length: " + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString());
                         continue;
                     }
-                    else if (isIndel && var.getCodonNum() >= tr.apply(var.getVariant()).proteinTrimmed().length())
+
+                    // indel cases to avoid
+                    boolean isIndel = var.getAaAlt().endsWith("?") || var.getAaAlt() == "";
+                    if (isIndel && var.getCodonNum() >= tr.apply(var.getVariant()).proteinTrimmed().length())
                     {
                         Timer.showStdErr("line where getCodonNum() was longer than the variant protein length: " + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString());
                         continue;
