@@ -168,11 +168,37 @@ public class ProteinXml {
                     Timer.showStdErr("getVariant() returned null for: " + var.toString());
                     continue;
                 }
-                else if (var.getVariant().line ==  null){
-                    Timer.showStdErr("line for getVariant() returned null for: " + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString());
-                    continue;
+                else{
+                    // cases to avoid
+                    if (var.getVariant().line ==  null){
+                        Timer.showStdErr("line for getVariant() returned null for: " + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString());
+                        continue;
+                    }
+                    if (var.getCodonNum() < 0){
+                        Timer.showStdErr("line for getCodonNum() was negative for: " + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString());
+                        continue;
+                    }
+
+                    // indel cases to avoid
+                    boolean isIndel = var.getAaAlt().endsWith("?") || var.getAaAlt() == "";
+                    if (isIndel && var.getCodonNum() >= tr.proteinTrimmed().length())
+                    {
+                        Timer.showStdErr("line where getCodonNum() was longer than the protein length: " + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString());
+                        continue;
+                    }
+                    else if (isIndel && var.getCodonNum() >= tr.apply(var.getVariant()).proteinTrimmed().length())
+                    {
+                        Timer.showStdErr("line where getCodonNum() was longer than the variant protein length: " + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString());
+                        continue;
+                    }
+                    else if (isIndel && tr.apply(var.getVariant()).proteinTrimmed().substring(var.getCodonNum()).endsWith("?"))
+                    {
+                        Timer.showStdErr("line where indel variant transcript does not have a stop codon: " + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString());
+                        continue;
+                    }
                 }
 
+                // write the xml
                 writeStartElement(writer, "feature");
                 writer.writeAttribute("type", "sequence variant");
                 String[] descArr = var.getVariant().line.split("\t");
@@ -186,7 +212,6 @@ public class ProteinXml {
                 String varSeq = var.getAaAlt().endsWith("?") || var.getAaAlt() == "" ? tr.apply(var.getVariant()).proteinTrimmed().substring(var.getCodonNum()) : var.getAaAlt();
                 writer.writeCharacters(varSeq);
                 writer.writeEndElement(); xmlDepth--; // alternate
-
                 writeStartElement(writer, "location");
                 if (var.getAaNetChange() != null)
                 {
