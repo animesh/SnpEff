@@ -140,19 +140,21 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 		VcfFileIterator vcf = null;
 
 		// Iterate over input files
-		switch (inputFormat) {
-		case VCF:
-			vcf = (multiThreaded ? annotateVcfMulti(inputFile, outputFormatter) : annotateVcf(inputFile));
-			break;
+		if (new File(inputFile).exists()) {
+			switch (inputFormat) {
+				case VCF:
+					vcf = (multiThreaded ? annotateVcfMulti(inputFile, outputFormatter) : annotateVcf(inputFile));
+					break;
 
-		case BED:
-			annotateBed(inputFile, outputFormatter);
-			break;
+				case BED:
+					annotateBed(inputFile, outputFormatter);
+					break;
 
-		default:
-			throw new RuntimeException("Cannot create variant file iterator on input format '" + inputFormat + "'");
+				default:
+					throw new RuntimeException("Cannot create variant file iterator on input format '" + inputFormat + "'");
+			}
+			outputFormatter.close();
 		}
-		outputFormatter.close();
 
 		// Create reports and finish up
 		boolean err = annotateFinish(vcf);
@@ -291,7 +293,7 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 		if (xmlProt != null) {
 			try {
 				Timer.showStdErr("Creating xml file " + xmlProt + " with " + transcriptVariants.keySet().size() + " transcripts");
-				ProteinXml.writeProteinXml(xmlProt, "Homo sapiens", transcriptVariants, vcfFile.getVcfHeader().getSampleNames());
+				ProteinXml.writeProteinXml(xmlProt, "Homo sapiens", transcriptVariants, vcfFile != null ? vcfFile.getVcfHeader().getSampleNames() : new ArrayList<String>());
 			} catch (IOException ex) {
 				System.err.println(ex.getMessage());
 			} catch (XMLStreamException ex) {
@@ -368,6 +370,17 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 		if (xmlProt2 != null) {
 			if ((new File(xmlProt2)).delete() && verbose) {
 				Timer.showStdErr("Deleted protein xml output file '" + xmlProt2 + "'");
+			}
+		}
+
+		// Set up transcript information for protein XML
+		// Start out the transcript list with everything, to which variants are added
+		transcriptVariants = new HashMap<>();
+		for (Gene g : genome.getGenes()){
+			for (Transcript t : g){
+				if (!transcriptVariants.containsKey(t)){
+					transcriptVariants.put(t, new ArrayList<>());
+				}
 			}
 		}
 
@@ -511,17 +524,6 @@ public class SnpEffCmdEff extends SnpEff implements VcfAnnotator {
 		// Open VCF file
 		VcfFileIterator vcfFile = new VcfFileIterator(inputFile, config.getGenome());
 		vcfFile.setDebug(debug);
-
-		// Set up transcript information for protein XML
-		// Start out the transcript list with everything, to which variants are added
-		transcriptVariants = new HashMap<>();
-		for (Gene g : genome.getGenes()){
-			for (Transcript t : g){
-				if (!transcriptVariants.containsKey(t)){
-					transcriptVariants.put(t, new ArrayList<>());
-				}
-			}
-		}
 
 		// Iterate over VCF entries
 		for (VcfEntry vcfEntry : vcfFile)
