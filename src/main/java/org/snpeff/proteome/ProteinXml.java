@@ -1,7 +1,7 @@
 package org.snpeff.proteome;
 
-import org.snpeff.interval.Gene;
-import org.snpeff.interval.Transcript;
+import org.snpeff.interval.*;
+import org.snpeff.interval.codonChange.CodonChange;
 import org.snpeff.snpEffect.VariantEffect;
 import org.snpeff.util.Timer;
 import org.snpeff.util.Tuple;
@@ -13,101 +13,11 @@ import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 public class ProteinXml {
 
     private static int xmlDepth = 0;
-
-    public static void writeVariantProteinXml(String xmlProtLocation, String organism, ArrayList<Tuple<Transcript, VariantEffect>> altTranscriptVariants) throws IOException, XMLStreamException {
-        XMLStreamWriter writer = XMLOutputFactory.newInstance().createXMLStreamWriter(new FileWriter(xmlProtLocation));
-        writer.writeStartDocument();
-        writeStartElement(writer, "mzLibProteinDb");
-
-        for (Tuple<Transcript, VariantEffect> trve : altTranscriptVariants)
-        {
-            Transcript tr = trve.first;
-            VariantEffect var = trve.second;
-            if (!tr.isProteinCoding() || tr.protein().isEmpty()  || tr.isErrorStartCodon() || !tr.protein().contains("*")
-                    || (var.getFunctionalClass().compareTo(VariantEffect.FunctionalClass.MISSENSE) < 0 && var.getAaRef() == var.getAaAlt())) // only annotate nonsynonymous variations
-                continue;
-
-            writeStartElement(writer, "entry");
-            writeStartElement(writer, "accession");
-            writer.writeCharacters(tr.getId());
-            writer.writeEndElement(); xmlDepth--;
-
-            if (tr.getId() != null) {
-                writeStartElement(writer, "name");
-                writer.writeCharacters(tr.getId());
-                writer.writeEndElement(); xmlDepth--;
-            }
-
-            Gene gene = (Gene)tr.findParent(Gene.class);
-            String name = gene.getGeneName();
-            String id = gene.getId();
-            String primary = name != null ? name : id;
-            writeStartElement(writer, "gene");
-            writeStartElement(writer, "name");
-            writer.writeAttribute("type", "primary");
-            writer.writeCharacters(primary);
-            writer.writeEndElement(); xmlDepth--;
-            writeStartElement(writer, "name");
-            writer.writeAttribute("type", "accession");
-            writer.writeCharacters(id);
-            writer.writeEndElement(); xmlDepth--;
-            writer.writeEndElement(); xmlDepth--;
-
-            if (organism != null) {
-                writeStartElement(writer, "organism");
-                writeStartElement(writer, "name");
-                writer.writeAttribute("type", "scientific");
-                writer.writeCharacters(organism);
-                writer.writeEndElement(); xmlDepth--;
-                writer.writeEndElement(); xmlDepth--;
-            }
-
-            writeStartElement(writer, "feature");
-            writer.writeAttribute("type", "sequence variant");
-            writer.writeAttribute("description", var.getVariant().line);
-            writeStartElement(writer, "original");
-            writer.writeCharacters(var.getAaRef());
-            writer.writeEndElement(); xmlDepth--; // reference
-            writeStartElement(writer, "variation");
-            writer.writeCharacters(var.getAaAlt());
-            writer.writeEndElement(); xmlDepth--; // alternate
-
-            writeStartElement(writer, "location");
-            if (var.getAaNetChange() != null)
-            {
-                writeStartElement(writer, "position");
-                writer.writeAttribute("position", Integer.toString(var.getCodonNum()));
-                writer.writeEndElement(); xmlDepth--;
-            }
-            else
-            {
-                writeStartElement(writer, "begin");
-                writer.writeAttribute("position", Integer.toString(var.getCodonNum()));
-                writer.writeEndElement(); xmlDepth--;
-                writeStartElement(writer, "end");
-                writer.writeAttribute("position", Integer.toString(var.getCodonNum() + var.getAaNetChange().length() - 1));
-                writer.writeEndElement(); xmlDepth--;
-            }
-            writer.writeEndElement(); xmlDepth--; // location
-            xmlDepth--; writePretty(writer); writer.writeEndElement();  // feature
-
-            writeStartElement(writer, "sequence");
-            writer.writeAttribute("length", Integer.toString(tr.protein().length()));
-            writer.writeCharacters(tr.proteinTrimmed());
-            writer.writeEndElement(); xmlDepth--; // sequence
-            xmlDepth--; writePretty(writer); writer.writeEndElement(); // entry
-        }
-        xmlDepth--; writePretty(writer); writer.writeEndElement(); // mzLibProteinDb
-        writer.writeEndDocument();
-        writer.flush();
-    }
 
     public static void writeProteinXml(String xmlProtLocation, String organism, HashMap<Transcript, List<VariantEffect>> transcriptVariants, List<String> sampleNames) throws IOException, XMLStreamException {
         XMLStreamWriter writer = XMLOutputFactory.newInstance().createXMLStreamWriter(new FileWriter(xmlProtLocation));
@@ -228,6 +138,41 @@ public class ProteinXml {
                     writer.writeEndElement(); xmlDepth--;
                     writeStartElement(writer, "end");
                     writer.writeAttribute("position", Integer.toString(var.getCodonNum() + var.getAaNetChange().length()));
+                    writer.writeEndElement(); xmlDepth--;
+                }
+                writer.writeEndElement(); xmlDepth--; // location
+                xmlDepth--; writePretty(writer); writer.writeEndElement();  // feature
+            }
+
+            float codonsSoFar = 0;
+            List<Cds> cdsList = tr.getCds();
+            for (int i = 0; i < cdsList.size() - 1; i++) {
+                Cds cds = cdsList.get(i);
+                float codonCount = (float)(cds.getEnd() - cds.getStart() + 1) / (float)CodonChange.CODON_SIZE;
+                float codonNum = codonCount + codonsSoFar;
+                int startCodonNum = (int)Math.ceil(codonNum); // which codon is the start of this CDS in?
+                int endCodonNum = startCodonNum == codonNum ? startCodonNum + 1 : startCodonNum; // completed the last codon?
+                codonsSoFar = codonNum;
+                if (endCodonNum >= tr.proteinTrimmed().length())
+                    continue;
+
+                writeStartElement(writer, "feature");
+                writer.writeAttribute("type", "splice site");
+                writer.writeAttribute("description", cds.getChromosomeName() + "\\t" + cds.getStrand() + "\\t" + cds.getStart()+ "\\t" + cds.getEnd() + "\\t" + cdsList.get(i+1).getStart()+ "\\t" + cdsList.get(i+1).getEnd());
+                writeStartElement(writer, "location");
+                if (endCodonNum - startCodonNum == 0)
+                {
+                    writeStartElement(writer, "position");
+                    writer.writeAttribute("position", Integer.toString(startCodonNum));
+                    writer.writeEndElement(); xmlDepth--;
+                }
+                else
+                {
+                    writeStartElement(writer, "begin");
+                    writer.writeAttribute("position", Integer.toString(startCodonNum));
+                    writer.writeEndElement(); xmlDepth--;
+                    writeStartElement(writer, "end");
+                    writer.writeAttribute("position", Integer.toString(endCodonNum));
                     writer.writeEndElement(); xmlDepth--;
                 }
                 writer.writeEndElement(); xmlDepth--; // location
