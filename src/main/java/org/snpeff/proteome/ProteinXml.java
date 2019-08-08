@@ -2,6 +2,7 @@ package org.snpeff.proteome;
 
 import org.snpeff.interval.*;
 import org.snpeff.interval.codonChange.CodonChange;
+import org.snpeff.snpEffect.EffectType;
 import org.snpeff.snpEffect.VariantEffect;
 import org.snpeff.util.Timer;
 import org.snpeff.util.Tuple;
@@ -71,6 +72,8 @@ public class ProteinXml {
             // TODO: Implement a better Transcript.protein() method for this output: trim to stop codon and possibly go beyond coding domain if there's a frameshift that extends
             for (VariantEffect var : transcriptVariants.get(tr))
             {
+//                if (var.getEffectType() == EffectType.STOP_LOST) Timer.showStdErr("stop_lost variant in protein xml writer: "+ (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)));
+//                if (var.getEffectType() == EffectType.STOP_GAINED) Timer.showStdErr("stop_gained variant in protein xml writer: "+ (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)));
                 if (var.getFunctionalClass().compareTo(VariantEffect.FunctionalClass.MISSENSE) < 0 && var.getAaRef() == var.getAaAlt()) { // only annotate indels and nonsynonymous variations
                     continue;
                 }
@@ -89,10 +92,13 @@ public class ProteinXml {
                         continue;
                     }
 
-                    // multiple stop codons or weird indel case
-                    if (var.getCodonNum() >= tr.proteinTrimmed().length())
+                    // multiple stop codons or weird indel case, but keep stop gains
+                    String protAlt = tr.apply(var.getVariant()).proteinTrimmed();
+                    boolean longerThanProtein = var.getCodonNum() >= protAlt.length();
+                    boolean stopGain = var.getCodonNum() == protAlt.length() && var.getEffectType() == EffectType.STOP_GAINED;
+                    if (longerThanProtein && !stopGain)
                     {
-                        Timer.showStdErr("line where getCodonNum() was longer than the protein length: " + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString());
+                        Timer.showStdErr("line where getCodonNum() " + Integer.toString(var.getCodonNum()) + " was longer than the protein length " + Integer.toString(tr.apply(var.getVariant()).proteinTrimmed().length()) +  ": " + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString());
                         continue;
                     }
 
@@ -117,27 +123,43 @@ public class ProteinXml {
                 descArr[7] = "ANN=" + (new VcfEffect(var, EffFormatVersion.DEFAULT_FORMAT_VERSION, false, false)).toString();// var.toString().replace("\t", "|");
                 writer.writeAttribute("description", String.join("\\t", descArr));
                 writeStartElement(writer, "original");
-                String refSeq = var.getAaAlt().endsWith("?") || var.getAaAlt() == "" ? tr.proteinTrimmed().substring(var.getCodonNum()) : var.getAaRef();
+                String refProt = tr.proteinTrimmed();
+                String altProt = tr.apply(var.getVariant()).proteinTrimmed();
+                int refSeqStart = var.getCodonNum() < refProt.length() ? var.getCodonNum() : refProt.length() - 1; // for stop loss
+                int altSeqStart = var.getCodonNum() < altProt.length() ? var.getCodonNum() : altProt.length() - 1; // for stop gain
+                String refSeq = var.getAaRef();
+                String varSeq = var.getAaAlt();
+                int pos = var.getCodonNum();
+                if (var.getAaAlt().endsWith("?") || var.getAaAlt() == "" || var.getCodonNum() >= refProt.length()){
+                    refSeq = refProt.substring(refSeqStart);
+                    varSeq = altProt.substring(refSeqStart);
+                    pos = refSeqStart;
+                }
+                else if (var.getCodonNum() >= altProt.length()){
+                    refSeq = refProt.substring(altSeqStart);
+                    varSeq = altProt.substring(altSeqStart);
+                    pos = altSeqStart;
+                }
                 writer.writeCharacters(refSeq);
                 writer.writeEndElement(); xmlDepth--; // reference
                 writeStartElement(writer, "variation");
-                String varSeq = var.getAaAlt().endsWith("?") || var.getAaAlt() == "" ? tr.apply(var.getVariant()).proteinTrimmed().substring(var.getCodonNum()) : var.getAaAlt();
                 writer.writeCharacters(varSeq);
                 writer.writeEndElement(); xmlDepth--; // alternate
+
                 writeStartElement(writer, "location");
                 if (var.getAaNetChange() != null)
                 {
                     writeStartElement(writer, "position");
-                    writer.writeAttribute("position", Integer.toString(var.getCodonNum() + 1));
+                    writer.writeAttribute("position", Integer.toString(pos + 1));
                     writer.writeEndElement(); xmlDepth--;
                 }
                 else
                 {
                     writeStartElement(writer, "begin");
-                    writer.writeAttribute("position", Integer.toString(var.getCodonNum() + 1));
+                    writer.writeAttribute("position", Integer.toString(pos + 1));
                     writer.writeEndElement(); xmlDepth--;
                     writeStartElement(writer, "end");
-                    writer.writeAttribute("position", Integer.toString(var.getCodonNum() + var.getAaNetChange().length()));
+                    writer.writeAttribute("position", Integer.toString(pos + var.getAaNetChange().length()));
                     writer.writeEndElement(); xmlDepth--;
                 }
                 writer.writeEndElement(); xmlDepth--; // location
